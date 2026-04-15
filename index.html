@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STATIC — Podcast Publisher</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700;900&family=Inter:wght@400;500&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700;900&family=Inter:wght@400;500&display=swap"></noscript>
+  <style>
+    :root {
+      --black:     #050a05;
+      --deep:      #0d1117;
+      --surface:   #161b22;
+      --panel:     #1c2128;
+      --border:    #30363d;
+      --green:     #00ff41;
+      --green-dim: #00c032;
+      --green-mute:#1a3a1a;
+      --amber:     #ffb700;
+      --amber-dim: #cc9200;
+      --blue:      #58a6ff;
+      --purple:    #bc8cff;
+      --text:      #e6edf3;
+      --text-dim:  #8b949e;
+      --text-muted:#484f58;
+      --red:       #f85149;
+      --font-mono: 'Share Tech Mono', monospace;
+      --font-ui:   'Inter', sans-serif;
+      --font-disp: 'Orbitron', monospace;
+      --sidebar-w: 280px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body { background: var(--deep); color: var(--text); font-family: var(--font-ui); display: flex; flex-direction: column; }
+
+    /* TOP BAR */
+    .topbar { height: 44px; background: var(--black); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 1rem; gap: 1rem; flex-shrink: 0; }
+    .topbar-logo { font-family: var(--font-disp); font-size: 0.85rem; color: var(--amber); letter-spacing: 0.15em; flex-shrink: 0; }
+    .topbar-logo span { color: var(--text-muted); font-size: 0.6rem; margin-left: 0.4rem; }
+    .topbar-spacer { flex: 1; }
+    .topbar-status { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.08em; }
+    .topbar-status.saved { color: var(--green-dim); }
+    .topbar-status.unsaved { color: var(--amber); }
+
+    /* MAIN */
+    .main { display: flex; flex: 1; overflow: hidden; }
+
+    /* SIDEBAR */
+    .sidebar { width: var(--sidebar-w); background: var(--black); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto; }
+    .sidebar-section { border-bottom: 1px solid var(--border); padding: 0.75rem; }
+    .sidebar-label { font-family: var(--font-mono); font-size: 0.55rem; letter-spacing: 0.2em; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; }
+    .sidebar input, .sidebar select, .sidebar textarea { width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: var(--font-ui); font-size: 0.8rem; padding: 0.4rem 0.5rem; border-radius: 4px; margin-bottom: 0.4rem; outline: none; transition: border-color 0.15s; }
+    .sidebar input:focus, .sidebar select:focus, .sidebar textarea:focus { border-color: var(--amber-dim); }
+    .sidebar textarea { resize: vertical; min-height: 80px; line-height: 1.4; }
+    .sidebar select option { background: var(--surface); }
+    .sidebar-field-label { font-size: 0.65rem; color: var(--text-dim); margin-bottom: 0.25rem; display: block; }
+
+    /* Show selector tabs */
+    .show-tabs { display: flex; gap: 2px; margin-bottom: 0.75rem; }
+    .show-tab { flex: 1; background: var(--surface); border: 1px solid var(--border); color: var(--text-muted); font-family: var(--font-mono); font-size: 0.55rem; letter-spacing: 0.08em; padding: 0.35rem 0.25rem; cursor: pointer; text-align: center; transition: 0.15s; border-radius: 3px; }
+    .show-tab:hover { border-color: var(--amber-dim); color: var(--amber-dim); }
+    .show-tab.active { background: var(--amber-dim); color: var(--black); border-color: var(--amber); font-weight: 600; }
+
+    /* Buttons */
+    .btn-pub { width: 100%; background: var(--amber-dim); color: var(--black); border: none; font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.1em; padding: 0.5rem; cursor: pointer; border-radius: 4px; transition: background 0.15s; margin-top: 0.25rem; }
+    .btn-pub:hover { background: var(--amber); }
+    .btn-pub:disabled { background: var(--text-muted); cursor: not-allowed; }
+    .btn-sec { width: 100%; background: none; color: var(--text-dim); border: 1px solid var(--border); font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.08em; padding: 0.4rem; cursor: pointer; border-radius: 4px; transition: 0.15s; margin-top: 0.25rem; }
+    .btn-sec:hover { border-color: var(--amber-dim); color: var(--amber-dim); }
+    .gh-status { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 0.5rem; }
+    .gh-status.ok { color: var(--green-dim); }
+    .gh-status.err { color: var(--red); }
+
+    /* CONTENT AREA */
+    .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .content-header { padding: 1rem 1.5rem 0.75rem; border-bottom: 1px solid var(--border); background: var(--deep); flex-shrink: 0; }
+    .content-title { font-family: var(--font-disp); font-size: 1rem; color: var(--amber); letter-spacing: 0.1em; margin-bottom: 0.25rem; }
+    .content-sub { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-muted); letter-spacing: 0.08em; }
+
+    /* Episode form */
+    .episode-form { flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-group { display: flex; flex-direction: column; gap: 0.3rem; }
+    .form-group.full { grid-column: 1 / -1; }
+    .form-label { font-size: 0.68rem; color: var(--text-dim); letter-spacing: 0.05em; font-family: var(--font-mono); }
+    .form-input { background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: var(--font-ui); font-size: 0.85rem; padding: 0.5rem 0.6rem; border-radius: 4px; outline: none; transition: border-color 0.15s; width: 100%; }
+    .form-input:focus { border-color: var(--amber-dim); }
+    .form-textarea { background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: var(--font-ui); font-size: 0.85rem; padding: 0.5rem 0.6rem; border-radius: 4px; outline: none; resize: vertical; min-height: 100px; line-height: 1.6; width: 100%; transition: border-color 0.15s; }
+    .form-textarea:focus { border-color: var(--amber-dim); }
+    .form-hint { font-size: 0.62rem; color: var(--text-muted); font-family: var(--font-mono); }
+
+    /* Episode list */
+    .ep-list { flex: 1; overflow-y: auto; padding: 1.5rem; }
+    .ep-list-title { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.15em; color: var(--text-muted); margin-bottom: 1rem; }
+    .ep-item { border: 1px solid var(--border); background: var(--surface); padding: 0.75rem 1rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 1rem; cursor: pointer; transition: border-color 0.15s; border-radius: 3px; }
+    .ep-item:hover { border-color: var(--amber-dim); }
+    .ep-item-num { font-family: var(--font-disp); font-size: 0.7rem; color: var(--amber-dim); min-width: 36px; }
+    .ep-item-info { flex: 1; }
+    .ep-item-title { font-size: 0.82rem; color: var(--text); margin-bottom: 0.15rem; }
+    .ep-item-meta { font-family: var(--font-mono); font-size: 0.58rem; color: var(--text-muted); }
+    .ep-item-edit { font-family: var(--font-mono); font-size: 0.58rem; color: var(--text-muted); border: 1px solid var(--border); padding: 0.2rem 0.5rem; border-radius: 3px; transition: 0.15s; }
+    .ep-item:hover .ep-item-edit { border-color: var(--amber-dim); color: var(--amber-dim); }
+
+    /* Tabs inside content */
+    .content-tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
+    .content-tab { padding: 0.6rem 1.25rem; font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.1em; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; transition: 0.15s; }
+    .content-tab:hover { color: var(--amber-dim); }
+    .content-tab.active { color: var(--amber); border-bottom-color: var(--amber); }
+
+    /* Toast */
+    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--panel); border: 1px solid var(--border); color: var(--text); font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em; padding: 0.6rem 1rem; border-radius: 4px; z-index: 2000; opacity: 0; transform: translateY(8px); transition: opacity 0.2s, transform 0.2s; pointer-events: none; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.ok { border-color: var(--green-dim); color: var(--green-dim); }
+    .toast.err { border-color: var(--red); color: var(--red); }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">STATIC <span>v0.1.0-alpha</span></div>
+  <div class="topbar-spacer"></div>
+  <div class="topbar-status" id="saveStatus">● READY</div>
+</div>
+
+<div class="main">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <!-- Show selector -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Active Show</div>
+      <div class="show-tabs">
+        <button class="show-tab active" onclick="setShow('tla',this)" title="Tech, Lies and Audiotape">TLA</button>
+        <button class="show-tab" onclick="setShow('forge',this)" title="The Forge">FORGE</button>
+        <button class="show-tab" onclick="setShow('interviews',this)" title="Interviews (Coming Soon)">INT</button>
+      </div>
+      <div class="gh-status" id="showStatus">Tech, Lies and Audiotape</div>
+    </div>
+
+    <!-- GitHub -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">GitHub</div>
+      <label class="sidebar-field-label">Personal Access Token</label>
+      <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
+      <label class="sidebar-field-label">Repo (owner/repo)</label>
+      <input type="text" id="ghRepo" placeholder="FluidFortune/podcast">
+      <label class="sidebar-field-label">Branch</label>
+      <input type="text" id="ghBranch" placeholder="main" value="main">
+      <div class="gh-status" id="ghStatus">Not connected</div>
+      <button class="btn-sec" onclick="testConnection()">TEST CONNECTION</button>
+    </div>
+
+    <!-- Publish -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Publish</div>
+      <button class="btn-pub" id="publishBtn" onclick="publishEpisode()">PUBLISH EPISODE →</button>
+      <button class="btn-sec" onclick="fetchEpisodeList()">LOAD EXISTING EPISODES</button>
+      <div class="gh-status" id="publishStatus"></div>
+    </div>
+
+    <!-- Podcast settings -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Show Settings</div>
+      <label class="sidebar-field-label">Show Title</label>
+      <input type="text" id="showTitle" placeholder="Tech, Lies and Audiotape">
+      <label class="sidebar-field-label">Show Description</label>
+      <textarea id="showDesc" placeholder="Show description for RSS feed…" rows="3"></textarea>
+      <label class="sidebar-field-label">Author / Host</label>
+      <input type="text" id="showAuthor" placeholder="Fluid Fortune">
+      <label class="sidebar-field-label">Show Website</label>
+      <input type="text" id="showWebsite" placeholder="https://podcast.fluidfortune.com">
+      <label class="sidebar-field-label">Show Artwork URL</label>
+      <input type="text" id="showArtwork" placeholder="https://…/artwork.jpg">
+      <button class="btn-sec" onclick="saveShowSettings()">SAVE SHOW SETTINGS</button>
+    </div>
+
+  </aside>
+
+  <!-- CONTENT -->
+  <div class="content">
+    <div class="content-header">
+      <div class="content-title" id="contentTitle">TECH, LIES AND AUDIOTAPE</div>
+      <div class="content-sub" id="contentSub">NEW EPISODE</div>
+    </div>
+
+    <div class="content-tabs">
+      <div class="content-tab active" onclick="switchTab('new',this)">NEW EPISODE</div>
+      <div class="content-tab" onclick="switchTab('list',this)">EPISODE LIST</div>
+    </div>
+
+    <!-- New episode form -->
+    <div class="episode-form" id="tabNew">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Episode Number</label>
+          <input type="number" class="form-input" id="epNumber" placeholder="1" min="1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Season (optional)</label>
+          <input type="number" class="form-input" id="epSeason" placeholder="1" min="1">
+        </div>
+      </div>
+
+      <div class="form-group full">
+        <label class="form-label">Episode Title</label>
+        <input type="text" class="form-input" id="epTitle" placeholder="Episode title…">
+      </div>
+
+      <div class="form-group full">
+        <label class="form-label">Slug (URL)</label>
+        <input type="text" class="form-input" id="epSlug" placeholder="episode-slug">
+        <span class="form-hint">podcast.fluidfortune.com/[show]/episodes/[slug].html</span>
+      </div>
+
+      <div class="form-group full">
+        <label class="form-label">Description / Show Notes</label>
+        <textarea class="form-textarea" id="epDesc" placeholder="Episode description and show notes…" style="min-height:140px"></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Archive.org Audio URL</label>
+          <input type="url" class="form-input" id="epAudio" placeholder="https://archive.org/download/…">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Duration (HH:MM:SS)</label>
+          <input type="text" class="form-input" id="epDuration" placeholder="1:23:45">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">File Size (bytes, for RSS)</label>
+          <input type="number" class="form-input" id="epFileSize" placeholder="52428800">
+          <span class="form-hint">Find on archive.org file details</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Explicit?</label>
+          <select class="form-input" id="epExplicit">
+            <option value="no">No</option>
+            <option value="yes">Yes</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group full">
+        <label class="form-label">Tags (comma separated)</label>
+        <input type="text" class="form-input" id="epTags" placeholder="tech, AI, podcast">
+      </div>
+
+      <!-- Hidden field for edit mode -->
+      <input type="hidden" id="epCreatedISO">
+    </div>
+
+    <!-- Episode list tab -->
+    <div class="ep-list" id="tabList" style="display:none">
+      <div class="ep-list-title">PUBLISHED EPISODES — click to load for editing</div>
+      <div id="epListContainer"><p style="color:var(--text-muted);font-size:.8rem;font-family:var(--font-mono)">Hit "LOAD EXISTING EPISODES" in the sidebar to fetch.</p></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────
+const SHOWS = {
+  tla: {
+    id: 'tla',
+    title: 'Tech, Lies and Audiotape',
+    folder: 'tech-lies-audiotape',
+    color: '#ffb700'
+  },
+  forge: {
+    id: 'forge',
+    title: 'The Forge',
+    folder: 'the-forge',
+    color: '#00c032'
+  },
+  interviews: {
+    id: 'interviews',
+    title: 'Interviews',
+    folder: 'interviews',
+    color: '#bc8cff',
+    comingSoon: true
+  }
+};
+
+let activeShow = 'tla';
+let isDirty = false;
+
+// ── SHOW SELECTOR ─────────────────────────────────────
+function setShow(showId, btn) {
+  document.querySelectorAll('.show-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  activeShow = showId;
+  const show = SHOWS[showId];
+  document.getElementById('showStatus').textContent = show.comingSoon
+    ? show.title + ' — COMING SOON'
+    : show.title;
+  document.getElementById('contentTitle').textContent = show.title.toUpperCase();
+  document.getElementById('publishBtn').disabled = !!show.comingSoon;
+
+  // Load saved show settings
+  loadShowSettings(showId);
+
+  // Clear form
+  clearForm();
+}
+
+// ── TABS ──────────────────────────────────────────────
+function switchTab(tab, btn) {
+  document.querySelectorAll('.content-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tabNew').style.display  = tab === 'new'  ? 'flex' : 'none';
+  document.getElementById('tabList').style.display = tab === 'list' ? 'block' : 'none';
+  document.getElementById('contentSub').textContent = tab === 'new' ? 'NEW EPISODE' : 'EPISODE LIST';
+}
+
+// ── SLUG AUTO-GEN ─────────────────────────────────────
+document.getElementById('epTitle').addEventListener('input', function() {
+  const slug = this.value.toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim().replace(/\s+/g, '-');
+  const slugEl = document.getElementById('epSlug');
+  if (!slugEl._manual) slugEl.value = slug;
+});
+document.getElementById('epSlug').addEventListener('input', function() {
+  this._manual = true;
+});
+
+// ── GH CONFIG ─────────────────────────────────────────
+function getGHConfig() {
+  return {
+    token:  document.getElementById('ghToken').value.trim(),
+    repo:   document.getElementById('ghRepo').value.trim(),
+    branch: document.getElementById('ghBranch').value.trim() || 'main'
+  };
+}
+
+// ── TEST CONNECTION ───────────────────────────────────
+async function testConnection() {
+  const { token, repo } = getGHConfig();
+  if (!token || !repo) { toast('Enter token and repo first', 'err'); return; }
+  const status = document.getElementById('ghStatus');
+  status.textContent = 'Connecting…';
+  try {
+    const res = await fetch(`https://api.github.com/repos/${repo}`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' }
+    });
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    status.textContent = `✓ ${data.full_name}`;
+    status.className = 'gh-status ok';
+    toast('Connected', 'ok');
+  } catch(e) {
+    status.textContent = `✗ ${e.message}`;
+    status.className = 'gh-status err';
+    toast('Connection failed', 'err');
+  }
+}
+
+// ── SHOW SETTINGS ─────────────────────────────────────
+function saveShowSettings() {
+  const settings = {
+    title:   document.getElementById('showTitle').value,
+    desc:    document.getElementById('showDesc').value,
+    author:  document.getElementById('showAuthor').value,
+    website: document.getElementById('showWebsite').value,
+    artwork: document.getElementById('showArtwork').value
+  };
+  localStorage.setItem(`static_show_${activeShow}`, JSON.stringify(settings));
+  toast('Show settings saved', 'ok');
+}
+
+function loadShowSettings(showId) {
+  const raw = localStorage.getItem(`static_show_${showId}`);
+  if (!raw) {
+    // Defaults
+    const show = SHOWS[showId];
+    document.getElementById('showTitle').value   = show.title;
+    document.getElementById('showDesc').value    = '';
+    document.getElementById('showAuthor').value  = 'Fluid Fortune';
+    document.getElementById('showWebsite').value = 'https://podcast.fluidfortune.com';
+    document.getElementById('showArtwork').value = '';
+    return;
+  }
+  const s = JSON.parse(raw);
+  document.getElementById('showTitle').value   = s.title   || '';
+  document.getElementById('showDesc').value    = s.desc    || '';
+  document.getElementById('showAuthor').value  = s.author  || '';
+  document.getElementById('showWebsite').value = s.website || '';
+  document.getElementById('showArtwork').value = s.artwork || '';
+}
+
+// ── CLEAR FORM ────────────────────────────────────────
+function clearForm() {
+  ['epNumber','epSeason','epTitle','epSlug','epDesc','epAudio','epDuration','epFileSize','epTags','epCreatedISO'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('epSlug')._manual = false;
+  document.getElementById('epExplicit').value = 'no';
+}
+
+// ── BUILD EPISODE HTML ────────────────────────────────
+function buildEpisodeHTML(ep, show, settings) {
+  const created  = ep.created  ? new Date(ep.created)  : new Date();
+  const modified = ep.modified ? new Date(ep.modified) : created;
+  const fmtDate  = d => d.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  const isEdited = ep.created && ep.modified && ep.created !== ep.modified;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${ep.title} | ${settings.title}</title>
+  <meta name="description" content="${ep.desc.substring(0,160).replace(/"/g,'')}">
+  <link rel="canonical" href="${settings.website}/${show.folder}/episodes/${ep.slug}.html">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="${ep.title} | ${settings.title}">
+  <meta property="og:description" content="${ep.desc.substring(0,160).replace(/"/g,'')}">
+  ${settings.artwork ? `<meta property="og:image" content="${settings.artwork}">` : ''}
+  <link rel="alternate" type="application/rss+xml" title="${settings.title}" href="${settings.website}/${show.folder}/feed.xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700;900&family=Inter:wght@400;500&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700;900&family=Inter:wght@400;500&display=swap"></noscript>
+  <style>
+    :root{--black:#050a05;--deep:#0d1117;--surface:#161b22;--border:#30363d;--green:#00ff41;--green-dim:#00c032;--green-mute:#1a3a1a;--amber:#ffb700;--amber-dim:#cc9200;--blue:#58a6ff;--text:#e6edf3;--text-dim:#8b949e;--text-muted:#484f58;--font-mono:'Share Tech Mono',monospace;--font-ui:'Inter',sans-serif;--font-disp:'Orbitron',monospace;}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--deep);color:var(--text);font-family:var(--font-ui);line-height:1.8}
+    nav{background:var(--black);border-bottom:1px solid var(--border);padding:.75rem 1.5rem;display:flex;align-items:center;gap:1rem;position:sticky;top:0;z-index:100}
+    nav a{font-family:var(--font-disp);font-size:.8rem;color:var(--amber);text-decoration:none;letter-spacing:.12em}
+    nav a:hover{color:#fff}
+    nav .back{color:var(--text-dim);font-family:var(--font-mono);font-size:.72rem}
+    nav .back:hover{color:var(--amber)}
+    .episode{max-width:740px;margin:0 auto;padding:3rem 1.5rem}
+    .ep-number{font-family:var(--font-mono);font-size:.6rem;color:var(--amber-dim);letter-spacing:.2em;margin-bottom:.5rem}
+    h1.ep-title{font-family:var(--font-disp);font-size:clamp(1.3rem,4vw,1.8rem);color:#fff;font-weight:900;letter-spacing:.04em;margin-bottom:1rem;line-height:1.2}
+    .ep-meta{display:flex;gap:1rem;flex-wrap:wrap;align-items:center;font-family:var(--font-mono);font-size:.62rem;color:var(--text-muted);margin-bottom:1.5rem}
+    .ep-meta .show-badge{color:var(--amber-dim);border:1px solid var(--amber-dim);padding:.1rem .5rem}
+    .ep-edited{font-family:var(--font-mono);font-size:.58rem;color:var(--text-muted);font-style:italic;margin-bottom:1.5rem}
+    .player-block{background:var(--surface);border:1px solid var(--border);padding:1.25rem;margin-bottom:2rem;border-left:3px solid var(--amber-dim)}
+    .player-label{font-family:var(--font-mono);font-size:.58rem;letter-spacing:.15em;color:var(--amber-dim);margin-bottom:.75rem}
+    audio{width:100%;height:40px;accent-color:var(--amber)}
+    audio::-webkit-media-controls-panel{background:var(--surface)}
+    .ep-desc{font-size:.92rem;color:var(--text);line-height:1.8}
+    .ep-desc p{margin-bottom:1rem}
+    .ep-tags{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border)}
+    .ep-tag{font-family:var(--font-mono);font-size:.58rem;color:var(--text-muted);border:1px solid var(--border);padding:.15rem .5rem}
+    .ep-nav{display:flex;justify-content:space-between;margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border)}
+    .ep-nav a{font-family:var(--font-mono);font-size:.65rem;color:var(--amber-dim);text-decoration:none;border:1px solid var(--border);padding:.4rem .8rem;transition:.15s}
+    .ep-nav a:hover{border-color:var(--amber);color:var(--amber)}
+    footer{border-top:1px solid var(--border);margin-top:4rem;padding:2rem 1.5rem;text-align:center;font-family:var(--font-mono);font-size:.62rem;color:var(--text-muted)}
+    footer a{color:var(--amber-dim);text-decoration:none}
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="${settings.website}">${settings.title.toUpperCase()}</a>
+    <a href="${settings.website}/${show.folder}" class="back">← ALL EPISODES</a>
+    <a href="https://fluidfortune.com" class="back" style="margin-left:auto">FLUID FORTUNE</a>
+  </nav>
+  <div class="episode">
+    <div class="ep-number">EP. ${String(ep.number).padStart(3,'0')}${ep.season ? ' · S' + ep.season : ''}</div>
+    <h1 class="ep-title">${ep.title}</h1>
+    <div class="ep-meta">
+      <span>${fmtDate(created)}</span>
+      <span class="show-badge">${settings.title.toUpperCase()}</span>
+      ${ep.duration ? `<span>${ep.duration}</span>` : ''}
+      ${ep.explicit === 'yes' ? `<span style="color:var(--red);border:1px solid var(--red);padding:.1rem .4rem">EXPLICIT</span>` : ''}
+    </div>
+    ${isEdited ? `<div class="ep-edited">Last edited ${modified.toLocaleString()}</div>` : ''}
+    <div class="player-block">
+      <div class="player-label">▶ PLAY EPISODE</div>
+      <audio controls preload="metadata" src="${ep.audio}">
+        Your browser does not support the audio element.
+        <a href="${ep.audio}">Download episode</a>
+      </audio>
+    </div>
+    <div class="ep-desc">${ep.desc.split('\n').filter(Boolean).map(p => `<p>${p}</p>`).join('')}</div>
+    ${ep.tags && ep.tags.length ? `<div class="ep-tags">${ep.tags.map(t=>`<span class="ep-tag">${t}</span>`).join('')}</div>` : ''}
+    <div class="ep-nav">
+      <a href="${settings.website}/${show.folder}">← ALL EPISODES</a>
+      <a href="${ep.audio}" download>DOWNLOAD →</a>
+    </div>
+  </div>
+  <footer>
+    <p><a href="${settings.website}">${settings.title}</a> &nbsp;|&nbsp; <a href="https://fluidfortune.com">FLUID FORTUNE</a></p>
+  </footer>
+</body>
+</html>`;
+}
+
+// ── BUILD RSS FEED ────────────────────────────────────
+function buildRSS(episodes, show, settings) {
+  const items = episodes.map(ep => {
+    const pubDate = new Date(ep.created).toUTCString();
+    return `
+    <item>
+      <title><![CDATA[${ep.title}]]></title>
+      <description><![CDATA[${ep.desc}]]></description>
+      <link>${settings.website}/${show.folder}/episodes/${ep.slug}.html</link>
+      <guid isPermaLink="true">${settings.website}/${show.folder}/episodes/${ep.slug}.html</guid>
+      <pubDate>${pubDate}</pubDate>
+      ${ep.audio ? `<enclosure url="${ep.audio}" length="${ep.fileSize || 0}" type="audio/mpeg"/>` : ''}
+      ${ep.duration ? `<itunes:duration>${ep.duration}</itunes:duration>` : ''}
+      <itunes:episode>${ep.number}</itunes:episode>
+      ${ep.season ? `<itunes:season>${ep.season}</itunes:season>` : ''}
+      <itunes:explicit>${ep.explicit || 'no'}</itunes:explicit>
+      ${(ep.tags||[]).map(t=>`<itunes:keywords>${t}</itunes:keywords>`).join('')}
+    </item>`;
+  }).join('');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+  xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"
+  xmlns:content="http://purl.org/rss/1.0/modules/content/"
+  xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title><![CDATA[${settings.title}]]></title>
+    <description><![CDATA[${settings.desc || settings.title}]]></description>
+    <link>${settings.website}/${show.folder}</link>
+    <atom:link href="${settings.website}/${show.folder}/feed.xml" rel="self" type="application/rss+xml"/>
+    <language>en-us</language>
+    <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
+    <itunes:author>${settings.author || 'Fluid Fortune'}</itunes:author>
+    <itunes:owner>
+      <itunes:name>${settings.author || 'Fluid Fortune'}</itunes:name>
+    </itunes:owner>
+    ${settings.artwork ? `<itunes:image href="${settings.artwork}"/>
+    <image><url>${settings.artwork}</url><title>${settings.title}</title><link>${settings.website}/${show.folder}</link></image>` : ''}
+    <itunes:explicit>no</itunes:explicit>
+    ${items}
+  </channel>
+</rss>`;
+}
+
+// ── PUBLISH EPISODE ───────────────────────────────────
+async function publishEpisode() {
+  const { token, repo, branch } = getGHConfig();
+  const show     = SHOWS[activeShow];
+  const settings = getShowSettings();
+
+  const title    = document.getElementById('epTitle').value.trim();
+  const slug     = document.getElementById('epSlug').value.trim();
+  const desc     = document.getElementById('epDesc').value.trim();
+  const audio    = document.getElementById('epAudio').value.trim();
+  const number   = parseInt(document.getElementById('epNumber').value) || 1;
+  const season   = parseInt(document.getElementById('epSeason').value) || null;
+  const duration = document.getElementById('epDuration').value.trim();
+  const fileSize = parseInt(document.getElementById('epFileSize').value) || 0;
+  const explicit = document.getElementById('epExplicit').value;
+  const tags     = document.getElementById('epTags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  const storedCreated = document.getElementById('epCreatedISO').value;
+
+  if (!token || !repo) { toast('Configure GitHub settings first', 'err'); return; }
+  if (!title || !slug) { toast('Title and slug required', 'err'); return; }
+  if (!audio)          { toast('Archive.org audio URL required', 'err'); return; }
+
+  const btn = document.getElementById('publishBtn');
+  btn.textContent = 'PUBLISHING…';
+  btn.disabled = true;
+
+  const nowISO    = new Date().toISOString();
+  const createdISO = storedCreated || nowISO;
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    Accept: 'application/vnd.github+json',
+    'Content-Type': 'application/json'
+  };
+
+  const ep = { title, slug, desc, audio, number, season, duration, fileSize, explicit, tags, created: createdISO, modified: nowISO };
+
+  try {
+    // 1. Push episode HTML
+    const epPath   = `${show.folder}/episodes/${slug}.html`;
+    const epHTML   = buildEpisodeHTML(ep, show, settings);
+    const epSHA    = await getFileSHA(repo, epPath, headers);
+    await pushFile(repo, epPath, epHTML, `${epSHA ? 'Update' : 'Publish'} episode: ${title}`, branch, headers, epSHA);
+
+    // 2. Update manifest
+    const manifest = await upsertManifest(repo, show, ep, branch, headers);
+
+    // 3. Push RSS feed
+    const rss    = buildRSS(manifest.episodes, show, settings);
+    const rssSHA = await getFileSHA(repo, `${show.folder}/feed.xml`, headers);
+    await pushFile(repo, `${show.folder}/feed.xml`, rss, `Update RSS: ${show.folder}`, branch, headers, rssSHA);
+
+    // 4. Update show index page
+    await updateShowIndex(repo, show, manifest, settings, branch, headers);
+
+    document.getElementById('epCreatedISO').value = createdISO;
+    document.getElementById('publishStatus').textContent = `✓ Published: EP${number} — ${title}`;
+    document.getElementById('publishStatus').className = 'gh-status ok';
+    toast('Episode published ✓', 'ok');
+
+  } catch(e) {
+    document.getElementById('publishStatus').textContent = `✗ ${e.message}`;
+    document.getElementById('publishStatus').className = 'gh-status err';
+    toast('Publish failed: ' + e.message, 'err');
+  } finally {
+    btn.textContent = 'PUBLISH EPISODE →';
+    btn.disabled = false;
+  }
+}
+
+// ── MANIFEST ──────────────────────────────────────────
+async function upsertManifest(repo, show, ep, branch, headers) {
+  const path = `${show.folder}/episodes.json`;
+  let manifest = { episodes: [] };
+  let sha = null;
+
+  const res = await getFileContent(repo, path, headers);
+  if (res) { sha = res.sha; manifest = JSON.parse(atob(res.content.replace(/\n/g,''))); }
+
+  const idx = manifest.episodes.findIndex(e => e.slug === ep.slug);
+  if (idx >= 0) manifest.episodes[idx] = ep;
+  else manifest.episodes.unshift(ep);
+  manifest.episodes.sort((a,b) => b.number - a.number);
+
+  await pushFile(repo, path, JSON.stringify(manifest, null, 2), `Update episodes.json: ${show.folder}`, branch, headers, sha);
+  return manifest;
+}
+
+// ── SHOW INDEX PAGE ───────────────────────────────────
+async function updateShowIndex(repo, show, manifest, settings, branch, headers) {
+  const path = `${show.folder}/index.html`;
+  const sha  = await getFileSHA(repo, path, headers);
+  const html = buildShowIndexHTML(show, manifest, settings);
+  await pushFile(repo, path, html, `Update show index: ${show.folder}`, branch, headers, sha);
+}
+
+function buildShowIndexHTML(show, manifest, settings) {
+  const episodes = manifest.episodes;
+  const epCards  = episodes.map(ep => {
+    const date = new Date(ep.created).toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'});
+    return `
+    <article class="ep-card">
+      <div class="ep-card-num">EP. ${String(ep.number).padStart(3,'0')}${ep.season ? ' · S'+ep.season : ''}</div>
+      <div class="ep-card-body">
+        <h2 class="ep-card-title"><a href="episodes/${ep.slug}.html">${ep.title}</a></h2>
+        <div class="ep-card-meta">
+          <span>${date}</span>
+          ${ep.duration ? `<span>${ep.duration}</span>` : ''}
+          ${ep.explicit === 'yes' ? `<span class="explicit">EXPLICIT</span>` : ''}
+        </div>
+        <p class="ep-card-desc">${ep.desc.substring(0,200)}${ep.desc.length>200?'…':''}</p>
+        <div class="ep-card-player">
+          <audio controls preload="none" src="${ep.audio}"></audio>
+        </div>
+        <div class="ep-card-links">
+          <a href="episodes/${ep.slug}.html" class="btn-ep">FULL EPISODE + NOTES →</a>
+          <a href="${ep.audio}" download class="btn-ep-sec">DOWNLOAD</a>
+        </div>
+      </div>
+    </article>`;
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${settings.title}</title>
+  <meta name="description" content="${(settings.desc||settings.title).substring(0,160)}">
+  <link rel="alternate" type="application/rss+xml" title="${settings.title}" href="${settings.website}/${show.folder}/feed.xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700;900&family=Inter:wght@400;500&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700;900&family=Inter:wght@400;500&display=swap"></noscript>
+  <style>
+    :root{--black:#050a05;--deep:#0d1117;--surface:#161b22;--border:#30363d;--amber:#ffb700;--amber-dim:#cc9200;--green:#00ff41;--green-dim:#00c032;--text:#e6edf3;--text-dim:#8b949e;--text-muted:#484f58;--font-mono:'Share Tech Mono',monospace;--font-ui:'Inter',sans-serif;--font-disp:'Orbitron',monospace;--max-w:800px;}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--deep);color:var(--text);font-family:var(--font-ui);line-height:1.7}
+    nav{background:var(--black);border-bottom:1px solid var(--border);padding:.75rem 1.5rem;display:flex;align-items:center;gap:1rem;position:sticky;top:0;z-index:100}
+    nav a{font-family:var(--font-disp);font-size:.75rem;color:var(--amber);text-decoration:none;letter-spacing:.1em}
+    nav a:hover{color:#fff}
+    nav .home{color:var(--text-dim);font-family:var(--font-mono);font-size:.68rem;margin-left:auto}
+    .show-header{max-width:var(--max-w);margin:0 auto;padding:3rem 1.5rem 2rem;display:flex;gap:2rem;align-items:center;flex-wrap:wrap}
+    .show-artwork{width:140px;height:140px;object-fit:cover;border:1px solid var(--border);flex-shrink:0}
+    .show-artwork-placeholder{width:140px;height:140px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:var(--font-disp);font-size:.7rem;color:var(--amber-dim);letter-spacing:.1em;flex-shrink:0}
+    .show-info h1{font-family:var(--font-disp);font-size:clamp(1.1rem,3vw,1.5rem);color:#fff;font-weight:900;letter-spacing:.06em;margin-bottom:.5rem}
+    .show-info p{font-size:.88rem;color:var(--text-dim);margin-bottom:1rem}
+    .show-info .rss-link{font-family:var(--font-mono);font-size:.62rem;color:var(--amber-dim);border:1px solid var(--amber-dim);padding:.2rem .6rem;text-decoration:none;display:inline-block}
+    .show-info .rss-link:hover{background:var(--amber-dim);color:var(--black)}
+    hr{border:none;border-top:1px solid var(--border);max-width:var(--max-w);margin:0 auto}
+    .episodes{max-width:var(--max-w);margin:0 auto;padding:0 1.5rem 4rem}
+    .ep-card{border-bottom:1px solid var(--border);padding:2rem 0;display:grid;grid-template-columns:60px 1fr;gap:1.25rem}
+    .ep-card:last-child{border-bottom:none}
+    .ep-card-num{font-family:var(--font-disp);font-size:.62rem;color:var(--amber-dim);letter-spacing:.08em;padding-top:.2rem}
+    .ep-card-title{font-family:var(--font-disp);font-size:clamp(.95rem,2.5vw,1.15rem);font-weight:700;letter-spacing:.04em;margin-bottom:.5rem}
+    .ep-card-title a{color:#fff;text-decoration:none;transition:color .15s}
+    .ep-card-title a:hover{color:var(--amber-dim)}
+    .ep-card-meta{font-family:var(--font-mono);font-size:.6rem;color:var(--text-muted);display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:.75rem}
+    .ep-card-meta .explicit{color:#f85149;border:1px solid #f85149;padding:.05rem .3rem}
+    .ep-card-desc{font-size:.85rem;color:var(--text-dim);line-height:1.65;margin-bottom:1rem}
+    .ep-card-player{margin-bottom:.75rem}
+    audio{width:100%;height:36px;accent-color:var(--amber)}
+    .ep-card-links{display:flex;gap:.5rem;flex-wrap:wrap}
+    .btn-ep{font-family:var(--font-mono);font-size:.62rem;letter-spacing:.1em;color:var(--black);background:var(--amber-dim);border:1px solid var(--amber);padding:.35rem .75rem;text-decoration:none;transition:.15s}
+    .btn-ep:hover{background:var(--amber)}
+    .btn-ep-sec{font-family:var(--font-mono);font-size:.62rem;letter-spacing:.1em;color:var(--text-dim);border:1px solid var(--border);padding:.35rem .75rem;text-decoration:none;transition:.15s}
+    .btn-ep-sec:hover{border-color:var(--amber-dim);color:var(--amber-dim)}
+    .empty{text-align:center;padding:4rem;font-family:var(--font-mono);font-size:.8rem;color:var(--text-muted)}
+    footer{border-top:1px solid var(--border);padding:2rem 1.5rem;text-align:center;font-family:var(--font-mono);font-size:.62rem;color:var(--text-muted)}
+    footer a{color:var(--amber-dim);text-decoration:none}
+    @media(max-width:600px){.ep-card{grid-template-columns:1fr}.ep-card-num{display:none}.show-header{flex-direction:column}}
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="${settings.website}">${settings.title.toUpperCase()}</a>
+    <a href="https://fluidfortune.com" class="home">FLUID FORTUNE →</a>
+  </nav>
+  <div class="show-header">
+    ${settings.artwork
+      ? `<img src="${settings.artwork}" alt="${settings.title}" class="show-artwork">`
+      : `<div class="show-artwork-placeholder">${show.folder.toUpperCase()}</div>`}
+    <div class="show-info">
+      <h1>${settings.title}</h1>
+      <p>${settings.desc || ''}</p>
+      <a href="feed.xml" class="rss-link">RSS FEED →</a>
+    </div>
+  </div>
+  <hr>
+  <div class="episodes">
+    ${episodes.length === 0
+      ? '<div class="empty">No episodes yet. Check back soon.</div>'
+      : epCards}
+  </div>
+  <footer>
+    <p><a href="${settings.website}">${settings.title}</a> &nbsp;|&nbsp; <a href="https://fluidfortune.com">FLUID FORTUNE</a></p>
+  </footer>
+</body>
+</html>`;
+}
+
+// ── FETCH EPISODE LIST ────────────────────────────────
+async function fetchEpisodeList() {
+  const { token, repo } = getGHConfig();
+  const show = SHOWS[activeShow];
+  if (!token || !repo) { toast('Configure GitHub settings first', 'err'); return; }
+
+  const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' };
+  const res = await getFileContent(repo, `${show.folder}/episodes.json`, headers);
+  if (!res) { toast('No episodes found yet', 'err'); return; }
+
+  const manifest = JSON.parse(atob(res.content.replace(/\n/g,'')));
+  const container = document.getElementById('epListContainer');
+  container.innerHTML = '';
+
+  if (!manifest.episodes.length) {
+    container.innerHTML = '<p style="color:var(--text-muted);font-size:.8rem;font-family:var(--font-mono)">No episodes published yet.</p>';
+    return;
+  }
+
+  manifest.episodes.forEach(ep => {
+    const div = document.createElement('div');
+    div.className = 'ep-item';
+    div.innerHTML = `
+      <div class="ep-item-num">EP.${String(ep.number).padStart(3,'0')}</div>
+      <div class="ep-item-info">
+        <div class="ep-item-title">${ep.title}</div>
+        <div class="ep-item-meta">${new Date(ep.created).toLocaleDateString()} · ${ep.duration||'—'}</div>
+      </div>
+      <div class="ep-item-edit">EDIT</div>`;
+    div.addEventListener('click', () => loadEpisodeIntoForm(ep));
+    container.appendChild(div);
+  });
+
+  toast(`${manifest.episodes.length} episodes loaded`, 'ok');
+}
+
+function loadEpisodeIntoForm(ep) {
+  document.getElementById('epNumber').value   = ep.number   || '';
+  document.getElementById('epSeason').value   = ep.season   || '';
+  document.getElementById('epTitle').value    = ep.title    || '';
+  document.getElementById('epSlug').value     = ep.slug     || '';
+  document.getElementById('epSlug')._manual   = true;
+  document.getElementById('epDesc').value     = ep.desc     || '';
+  document.getElementById('epAudio').value    = ep.audio    || '';
+  document.getElementById('epDuration').value = ep.duration || '';
+  document.getElementById('epFileSize').value = ep.fileSize || '';
+  document.getElementById('epExplicit').value = ep.explicit || 'no';
+  document.getElementById('epTags').value     = (ep.tags||[]).join(', ');
+  document.getElementById('epCreatedISO').value = ep.created || '';
+
+  // Switch to new episode tab to show the form
+  document.querySelectorAll('.content-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.content-tab')[0].classList.add('active');
+  document.getElementById('tabNew').style.display  = 'flex';
+  document.getElementById('tabList').style.display = 'none';
+  document.getElementById('contentSub').textContent = 'EDITING: ' + ep.title;
+  toast('Episode loaded for editing', 'ok');
+}
+
+// ── GH HELPERS ────────────────────────────────────────
+async function getFileSHA(repo, path, headers) {
+  try {
+    const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, { headers });
+    if (!res.ok) return null;
+    const d = await res.json();
+    return d.sha || null;
+  } catch { return null; }
+}
+
+async function getFileContent(repo, path, headers) {
+  try {
+    const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, { headers });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
+
+async function pushFile(repo, path, content, message, branch, headers, sha) {
+  const encoded = btoa(unescape(encodeURIComponent(content)));
+  const body = { message, content: encoded, branch };
+  if (sha) body.sha = sha;
+  const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+    method: 'PUT', headers, body: JSON.stringify(body)
+  });
+  if (!res.ok) { const e = await res.json(); throw new Error(e.message || res.status); }
+  return res;
+}
+
+function getShowSettings() {
+  return {
+    title:   document.getElementById('showTitle').value   || SHOWS[activeShow].title,
+    desc:    document.getElementById('showDesc').value    || '',
+    author:  document.getElementById('showAuthor').value  || 'Fluid Fortune',
+    website: document.getElementById('showWebsite').value || 'https://podcast.fluidfortune.com',
+    artwork: document.getElementById('showArtwork').value || ''
+  };
+}
+
+// ── PERSIST SETTINGS ──────────────────────────────────
+['ghToken','ghRepo','ghBranch'].forEach(id => {
+  const el = document.getElementById(id);
+  const stored = localStorage.getItem('static_' + id);
+  if (stored) el.value = stored;
+  el.addEventListener('input', () => localStorage.setItem('static_' + id, el.value));
+});
+
+// Load default show settings on boot
+loadShowSettings('tla');
+
+// ── TOAST ─────────────────────────────────────────────
+function toast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.className = 'toast', 2800);
+}
+</script>
+</body>
+</html>
